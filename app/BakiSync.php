@@ -42,11 +42,11 @@ class BakiSync extends ProductsSync {
 
     public function process_products()
     {
-        $approvedTires = array_filter($this->products, function($product) { 
-            return  !in_array($product["Kategorija"], self::NOT_APPROVED) 
+        $approvedProducts = array_filter($this->products, function($product) {
+            return  (!in_array($product["Kategorija"], self::NOT_APPROVED) 
                 && $product["Sezona"] != "ROF" 
                 && !in_array($product["Proizvodjac"], self::NOT_APPROVED_BRANDS) 
-                && in_array($product["Proizvodjac"], self::BRANDS); 
+                && in_array($product["Proizvodjac"], self::BRANDS)); 
         });
 
         $products = array_map(function($product) {
@@ -105,6 +105,7 @@ class BakiSync extends ProductsSync {
             $price = $price * 0.75;
             $price = $price * 1.15;
             $price = $price * 1.20;
+            $price = number_format(round($price, 6), 6, '.', ',');
 
             $height = gettype($product["Visina"])==="string"?$product["Visina"]:"";
             $width = $product["Sirina"];
@@ -118,13 +119,15 @@ class BakiSync extends ProductsSync {
 
             $xl = (strpos(strtolower($product["Naziv"]), 'xl') !== false)?"da":"";
             $rof = (strpos(strtolower($product["Naziv"]), 'rof') !== false)?"da":"";
-            $weight = floatval($product["Precnik"])<17?9:14;
+            $weight = floatval($product["Precnik"])<17?"9":"14";
 
-            return new Product($product["ID"], $program, $width, $height, $radius, $speedIndex, $loadIndex, $brand, $season, $xl, $rof, $price, $product["Naziv"], "BAKI", $weight);
+            return new Product($product["ID"], $program, $width, $height, $radius, $speedIndex, $loadIndex, $brand, $season, $xl, $rof, $price, $product["Naziv"], $this->get_sync_name(), $weight);
 
-        }, $this->products);
+        }, $approvedProducts);
 
-        $this->products = $products;
+        $this->products = array_filter($products, function($product) {
+            return floatval(str_replace(',', '', $product->price)) > 1000;
+        });
     }
 
     public function fetch_products()

@@ -9,12 +9,13 @@ use Dotenv\Dotenv;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Carbon\Carbon;
+use App\WoocommerceSync;
 
 $dotenv = new Dotenv(__DIR__);
 $dotenv->load();
 
 $logger = new Logger('tyressync_logger');
-$logger->pushHandler(new StreamHandler(__DIR__ . "/logs/log-" . Carbon::now()->format('d.m.Y\TH.i.s') . ".log", Logger::DEBUG));
+$logger->pushHandler(new StreamHandler(__DIR__ . "/logs/log-" . Carbon::now()->format('Y.m.d\TH.i.s') . ".log", Logger::DEBUG));
 
 $productSyncers = [
     new PneumasterSync(getenv('PNEUMASTER_USERNAME'), getenv('PNEUMASTER_PASSWORD')),
@@ -47,3 +48,11 @@ foreach($products as $product) {
 }
 
 $logger->info('Images matching successfully done.');
+
+$logger->info('Starting sync with woocommerce.', [
+    'total_products_to_sync' => count($products)
+]);
+
+$woocommerceSync = new WoocommerceSync(getenv('WOOCOMMERCE_URL'), getenv('WOOCOMMERCE_CONSUMER_KEY'), getenv('WOOCOMMERCE_CONSUMER_SECRET'));
+
+$woocommerceSync->sync_products($products);

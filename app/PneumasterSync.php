@@ -100,10 +100,10 @@ class PneumasterSync extends ProductsSync {
     private function process_products()
     {
         $approvedProducts = array_filter($this->products, function($product) {
-            return  !in_array($product[14], self::NOT_APPROVED) 
+            return  (!in_array($product[14], self::NOT_APPROVED) 
                 && $product[4] !== "-" && $product[4] !== "" 
                 && !in_array($product[4], self::NOT_APPROVED_BRANDS) 
-                && in_array($product[4], self::BRANDS);
+                && in_array($product[4], self::BRANDS));
         });
 
         $products = array_map(function ($product) {
@@ -172,6 +172,7 @@ class PneumasterSync extends ProductsSync {
             $price = floatval(str_replace(",", "", $product[8])) * 0.7;
             $price = $price * 1.15;
             $price = $price * 1.20;
+            $price = number_format(round($price, 6), 6, '.', ',');
 
             $brand = $product[4];
 
@@ -181,12 +182,16 @@ class PneumasterSync extends ProductsSync {
             
             $xl = (strpos(strtolower($product[3]), 'xl') !== false)?"da":"";
             $rof = (strpos(strtolower($product[3]), 'rof') !== false)?"da":"";
-            $weight = floatval($radius)<17?9:14;
+            $weight = floatval($radius)<17?"9":"14";
 
-            return new Product($product[1], $program, $width, $height, $radius, $speedIndex, $loadIndex, $brand, $season, $xl, $rof, $price, $product[3], "Pneumaster", $weight);
+            return new Product($product[1], $program, $width, $height, $radius, $speedIndex, $loadIndex, $brand, $season, $xl, $rof, $price, $product[3], $this->get_sync_name(), $weight);
         }, $approvedProducts);
 
-        $this->products = $products;
+
+
+        $this->products = array_filter($products, function($product) {
+            return floatval(str_replace(',', '', $product->price)) > 1000;
+        });
     }
 
     public function fetch_products()
@@ -197,7 +202,7 @@ class PneumasterSync extends ProductsSync {
             'form_params' => [
                 'command'   => "local.cache.artikal",
                 'output'    => "json",
-                'params'    => '[{"partnerId":'. $this->clientId .',"magacin":"","dStart":0,"dLength":100,"dSearch":"","dVrste":"","dAtributi":"","modul":"ART"}]'
+                'params'    => '[{"partnerId":'. $this->clientId .',"magacin":"","dStart":0,"dLength":5000,"dSearch":"","dVrste":"","dAtributi":"","modul":"ART"}]'
             ],
             'headers' => $this->get_headers()
         ]);
@@ -216,6 +221,6 @@ class PneumasterSync extends ProductsSync {
     }
 
     public function get_sync_name() {
-        return 'PNEUMASTER';
+        return 'Pneumaster';
     }
 }
